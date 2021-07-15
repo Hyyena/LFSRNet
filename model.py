@@ -125,4 +125,4 @@ def IMshow(img):
 # plt.show()
 
 # dataset class별로 train_set(imagefolder 이용), train_loader(dataloader 이용) 만듬
-# 각 class에서 81개의 tensor를 resblock을 통과하게끔
+# 각 class에서 81개의 tensor를 resblock을 통과하게 만듬
