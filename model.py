@@ -21,7 +21,9 @@ print("Using torch %s %s"
 
 # 데이터 전처리
 trans = transforms.Compose([transforms.ToTensor(),
-                            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]) # 0.5는 임의의 값이므로, 데이터셋의 최적 평균, 표준편차를 구하면 더 좋은 결과가 나올 수 있음
+                            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+# 0.5는 임의의 값이므로, 데이터셋의 최적 평균, 표준편차를 구하면 더 좋은 결과가 나올 수 있음
+
 train_set = datasets.ImageFolder(root ="Datasets/", transform= trans)
 
 print("18번째 데이터 : ")
@@ -35,7 +37,8 @@ classes = train_set.classes
 print("train_set classes : {}".format(classes))
 
 # DataLoader
-train_loader = DataLoader(dataset= train_set, batch_size= 1, shuffle = False)
+batch_size = 81 # batch_size
+train_loader = DataLoader(dataset= train_set, batch_size= batch_size, shuffle = False)
 print("train_loader data : {}".format(len(train_loader)))
 
 # Iteration
@@ -45,7 +48,7 @@ print("train_loader data label : {}".format(labels))
 print("total of train_loader data : ")
 print(images)
 
-# ResBolck
+# ResBlock
 class ResBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride= 1):
         super(ResBlock, self).__init__()
@@ -99,10 +102,11 @@ def train(model, train_loader):
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         output = model(data)
-    return output
+        loss = F.cross_entropy(output, target)
+        return output, loss
 
 print("train tensor : ")
-epochs = 81
+epochs = 1
 for epoch in range(epochs):
     print(train(model, train_loader))
 
