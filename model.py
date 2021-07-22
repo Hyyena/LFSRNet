@@ -24,6 +24,7 @@ trans = transforms.Compose([transforms.ToTensor(),
                             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 # 0.5는 임의의 값이므로, 데이터셋의 최적 평균, 표준편차를 구하면 더 좋은 결과가 나올 수 있음
 
+# root 경로 내에 있는 이미지 데이터를 tensor 형태로 변환함
 train_set = datasets.ImageFolder(root ="Datasets/", transform= trans)
 
 print("18번째 데이터 : ")
@@ -37,7 +38,7 @@ classes = train_set.classes
 print("train_set classes : {}".format(classes))
 
 # DataLoader
-batch_size = 81 # batch_size
+batch_size = 1 # batch_size
 train_loader = DataLoader(dataset= train_set, batch_size= batch_size, shuffle = False)
 print("train_loader data : {}".format(len(train_loader)))
 
@@ -47,6 +48,8 @@ images, labels = dataiter.next()
 print("train_loader data label : {}".format(labels))
 print("total of train_loader data : ")
 print(images)
+print("train_loader data = torch.Size([batch size, channel size, width of img, height of img])")
+print("train_loader data = {}".format(images.shape))
 
 # ResBlock
 class ResBlock(nn.Module):
@@ -65,15 +68,13 @@ class ResBlock(nn.Module):
         output = F.relu(output)
         return output
 
-# model = ResBlock(trainloader).to(device)
-# print(model)
-
 # LFSRNet
 class LFSRNet(nn.Module):
     def __init__(self):
         super(LFSRNet, self).__init__()
         self.in_channels = 3
         self.layer1 = self._make_layer(3, 1, stride=1)
+        # self.conv3 = nn.Conv2d(2, )
 
     def _make_layer(self, channels, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
@@ -84,9 +85,15 @@ class LFSRNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, input):
-        output = self.layer1(input)
-        output = output.view(output.size(0), -1)
-        return output
+        output_1 = self.layer1(input)
+        # output_1 = output_1.view(output_1.size(0), -1)
+        print("output_1 : ")
+        print(output_1.shape)
+        numOfSAI = len(train_loader)
+        # for i in range(numOfSAI):
+        #     output_2 = self.layer1(input)
+        #     output_2 = output_2.view(output_2.size(0), -1)
+        return output_1
 
 model = LFSRNet().to(device)
 print(model)
@@ -99,13 +106,17 @@ print(model)
 # train function
 def train(model, train_loader):
     model.train()
-    for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = data.to(device), target.to(device)
-        output = model(data)
-        loss = F.cross_entropy(output, target)
-        return output, loss
+    numOfSAI = len(train_loader)
+    for i in range(numOfSAI):
+        for batch_idx, (data, target) in enumerate(train_loader):
+            data, target = data.to(device), target.to(device)
+            output = model(data)
+            print(batch_idx)
+            print(type(train_loader))
+            # loss = F.cross_entropy(output, target)
+            return output, target
 
-print("train tensor : ")
+print("< Feature extraction >")
 epochs = 1
 for epoch in range(epochs):
     print(train(model, train_loader))
@@ -115,7 +126,6 @@ def IMshow(img):
     np_img = img.numpy()
     # plt.imshow(np_img)
     plt.imshow(np.transpose(np_img, (1, 2, 0)))
-
     print(np_img.shape)
     print((np.transpose(np_img, (1, 2, 0))).shape)
 
