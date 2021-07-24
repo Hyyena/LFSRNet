@@ -20,12 +20,14 @@ print("Using torch %s %s"
         if cuda else "CPU"))
 
 # 데이터 전처리
+'''
+0.5는 임의의 값이므로, 데이터셋의 최적 평균, 표준편차를 구하면 더 좋은 결과가 나올 수 있음
+'''
 trans = transforms.Compose([transforms.ToTensor(),
                             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-# 0.5는 임의의 값이므로, 데이터셋의 최적 평균, 표준편차를 구하면 더 좋은 결과가 나올 수 있음
 
 # root 경로 내에 있는 이미지 데이터를 tensor 형태로 변환함
-train_set = datasets.ImageFolder(root ="Datasets/", transform= trans)
+train_set = datasets.ImageFolder(root="Datasets/", transform=trans)
 
 print("18번째 데이터 : ")
 print(train_set.__getitem__(18)) # 18번째 데이터
@@ -38,8 +40,8 @@ classes = train_set.classes
 print("train_set classes : {}".format(classes))
 
 # DataLoader
-batch_size = 1 # batch_size
-train_loader = DataLoader(dataset= train_set, batch_size= batch_size, shuffle = False)
+batch_size = 81 # batch_size
+train_loader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False)
 print("train_loader data : {}".format(len(train_loader)))
 
 # Iteration
@@ -53,19 +55,18 @@ print("train_loader data = {}".format(images.shape))
 
 # ResBlock
 class ResBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, stride= 1):
+    def __init__(self, in_channels, out_channels, stride=1):
         super(ResBlock, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size= 3,
-                               stride= 1, padding= 1, bias= False)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3,
+                               stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(out_channels)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size= 3,
-                               stride= 1, padding= 1, bias= False)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3,
+                               stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels)
 
     def forward(self, input):
         output = F.relu(self.bn1(self.conv1(input)))
-        output = self.bn2(self.conv2(output))
-        output = F.relu(output)
+        output = F.relu(self.bn2(self.conv2(output)))
         return output
 
 # LFSRNet
@@ -74,7 +75,7 @@ class LFSRNet(nn.Module):
         super(LFSRNet, self).__init__()
         self.in_channels = 3
         self.layer1 = self._make_layer(3, 1, stride=1)
-        # self.conv3 = nn.Conv2d(2, )
+        self.conv3 = nn.Conv2d(3, 3, kernel_size=3, stride=1, padding=1, bias=False)
 
     def _make_layer(self, channels, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
@@ -86,41 +87,71 @@ class LFSRNet(nn.Module):
 
     def forward(self, input):
         output_1 = self.layer1(input)
-        # output_1 = output_1.view(output_1.size(0), -1)
-        print("output_1 : ")
+        print("output_1 :")
         print(output_1.shape)
-        numOfSAI = len(train_loader)
-        # for i in range(numOfSAI):
-        #     output_2 = self.layer1(input)
-        #     output_2 = output_2.view(output_2.size(0), -1)
-        return output_1
+        print(output_1)
 
-model = LFSRNet().to(device)
-print(model)
+        output_2 = F.relu(self.conv3(output_1))
+        print("output_2 :")
+        print(output_2.shape)
+        print(output_2)
 
-# x = torch.randn(3, 3, 512, 512).to(device)
-# output = model(x)
-# print(output.size())
-# summary(model, (3, 512, 512), device= device.type)
+        for i in range(3):
+            tensor = torch.cat([output_1, output_2], dim=1)
+            print("tensor {}".format(i))
+            print(tensor.shape)
+            print(tensor)
+        print("Last tensor")
+        print(tensor.shape)
+        print(tensor)
+
+        # output_3 = []
+        # numOfSAI = len(train_loader)
+        # output_3.append(output_2)
+        # # output_3 = torch.stack([output_2])
+        # print("output_3 :")
+        # # print(output_3.shape)
+        # print(output_3)
 
 # train function
 def train(model, train_loader):
     model.train()
     numOfSAI = len(train_loader)
-    for i in range(numOfSAI):
-        for batch_idx, (data, target) in enumerate(train_loader):
-            data, target = data.to(device), target.to(device)
-            output = model(data)
-            print(batch_idx)
-            print(type(train_loader))
-            # loss = F.cross_entropy(output, target)
-            return output, target
+    print("Feature : {}개".format(numOfSAI))
+    for batch_idx, (data, target) in enumerate(train_loader):
+        data, target = data.to(device), target.to(device)
+        output = model(data)
+        # loss = F.cross_entropy(output, target)
+
+# model visualization
+model = LFSRNet().to(device)
+print(model)
 
 print("< Feature extraction >")
 epochs = 1
 for epoch in range(epochs):
     print(train(model, train_loader))
 
+x = 0
+y = []
+for i in range(3):
+    x += 1
+    y.append(x)
+print(y)
+print(x)
+
+'''
+< Model Visualization >
+Test code by using random tensor
+'''
+# x = torch.randn(3, 3, 512, 512).to(device)
+# output = model(x)
+# # print(output.shape())
+# summary(model, (3, 512, 512), device=device.type)
+
+'''
+< Data Visualization >
+'''
 def IMshow(img):
     img = img / 2 + 0.5  # unnormalize
     np_img = img.numpy()
@@ -138,5 +169,8 @@ def IMshow(img):
 # # plt.imshow(images.numpy())
 # plt.show()
 
+'''
+< Memo >
+'''
 # dataset class별로 train_set(imagefolder 이용), train_loader(dataloader 이용) 만듬
 # 각 class에서 81개의 tensor를 resblock을 통과하게
