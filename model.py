@@ -76,6 +76,7 @@ class LFSRNet(nn.Module):
         self.in_channels = 3
         self.layer1 = self._make_layer(3, 1, stride=1)
         self.conv3 = nn.Conv2d(3, 3, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv4 = nn.Conv2d(486, 3, kernel_size=3, stride=1, padding=1, bias=False)
 
     def _make_layer(self, channels, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
@@ -104,6 +105,10 @@ class LFSRNet(nn.Module):
         print("Last tensor")
         print(tensor.shape)
         print(tensor)
+        k_tensor = tensor.view(1, 486, 512, 512)
+        k_tensor = F.relu(self.conv4(k_tensor))
+        print("k_tensor")
+        print(k_tensor.shape)
 
         # output_3 = []
         # numOfSAI = len(train_loader)
