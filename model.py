@@ -57,11 +57,9 @@ print("train_loader data = {}".format(images.shape))
 class ResBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1):
         super(ResBlock, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3,
-                               stride=1, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(out_channels)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3,
-                               stride=1, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels)
 
     def forward(self, input):
@@ -76,7 +74,7 @@ class LFSRNet(nn.Module):
         self.in_channels = 3
         self.layer1 = self._make_layer(3, 1, stride=1)
         self.conv3 = nn.Conv2d(3, 3, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv4 = nn.Conv2d(486, 3, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv4 = nn.Conv2d(243, 3, kernel_size=3, stride=1, padding=1, bias=False)
 
     def _make_layer(self, channels, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
@@ -97,32 +95,15 @@ class LFSRNet(nn.Module):
         print(output_2.shape)
         print(output_2)
 
-        for i in range(3):
-            tensor = torch.cat([output_1, output_2], dim=1)
-            print("tensor {}".format(i))
-            print(tensor.shape)
-            print(tensor)
-        print("Last tensor")
-        print(tensor.shape)
-        print(tensor)
-        k_tensor = tensor.view(1, 486, 512, 512)
-        k_tensor = F.relu(self.conv4(k_tensor))
-        print("k_tensor")
-        print(k_tensor.shape)
-
-        # output_3 = []
-        # numOfSAI = len(train_loader)
-        # output_3.append(output_2)
-        # # output_3 = torch.stack([output_2])
-        # print("output_3 :")
-        # # print(output_3.shape)
-        # print(output_3)
+        output_2 = output_2.view(1, 243, 512, 512) # Reshape the tensor [81, 3, 512, 512] -> [1, 243, 512, 512]
+        output_3 = F.relu(self.conv4(output_2))
+        print("output_3 :")
+        print(output_3.shape)
+        print(output_3)
 
 # train function
 def train(model, train_loader):
     model.train()
-    numOfSAI = len(train_loader)
-    print("Feature : {}개".format(numOfSAI))
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         output = model(data)
@@ -132,18 +113,10 @@ def train(model, train_loader):
 model = LFSRNet().to(device)
 print(model)
 
-print("< Feature extraction >")
+print("< Training >")
 epochs = 1
 for epoch in range(epochs):
-    print(train(model, train_loader))
-
-x = 0
-y = []
-for i in range(3):
-    x += 1
-    y.append(x)
-print(y)
-print(x)
+    train(model, train_loader)
 
 '''
 < Model Visualization >
