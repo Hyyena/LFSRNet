@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 import torchvision
 from torchvision import transforms, datasets, models
 from torchvision.transforms.functional import to_pil_image
-from torchsummary import summary
+from torchinfo import summary
 
 # Device configuration
 cuda = torch.cuda.is_available()
@@ -54,17 +54,37 @@ print("train_loader data = torch.Size([batch size, channel size, width of img, h
 print("train_loader data = {}".format(images.shape))
 
 # ResBlock
-class ResBlock(nn.Module):
+class ResBlock(nn.Module): # BottleNeck Structure
+    expansion = 4
     def __init__(self, in_channels, out_channels, stride=1):
         super(ResBlock, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=1,
+                               stride=stride, bias=False)
         self.bn1 = nn.BatchNorm2d(out_channels)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3,
+                               stride=stride, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels)
+        self.conv3 = nn.Conv2d(in_channels, out_channels * ResBlock.expansion,
+                               kernel_size=1, stride=stride, bias=False)
+        self.bn3 = nn.BatchNorm2d(out_channels * ResBlock.expansion)
+        self.shortcut = nn.Sequential()
+
+        # Projection mapping
+        if stride != 1 or in_channels != out_channels:
+            self.shortcut = nn.Sequential(nn.Conv2d(in_channels,
+                                                    out_channels * ResBlock.expansion,
+                                                    kernel_size=1,
+                                                    stride=stride,
+                                                    bias=False),
+                            nn.BatchNorm2d(out_channels * ResBlock.expansion)
+            )
 
     def forward(self, input):
         output = F.relu(self.bn1(self.conv1(input)))
         output = F.relu(self.bn2(self.conv2(output)))
+        output = self.bn3(self.conv3(output))
+        output = output + self.shortcut(output)
+        output = F.relu(output)
         return output
 
 # LFSRNet
@@ -73,8 +93,8 @@ class LFSRNet(nn.Module):
         super(LFSRNet, self).__init__()
         self.in_channels = 3
         self.layer1 = self._make_layer(3, 1, stride=1)
-        self.conv3 = nn.Conv2d(3, 3, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv4 = nn.Conv2d(243, 3, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv4 = nn.Conv2d(12, 3, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv5 = nn.Conv2d(243, 3, kernel_size=3, stride=1, padding=1, bias=False)
 
     def _make_layer(self, channels, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
@@ -85,23 +105,26 @@ class LFSRNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, input):
+        # Feature extraction
         output_1 = self.layer1(input)
         print("output_1 :")
         print(output_1.shape)
-        print(output_1)
+        # print(output_1)
 
-        output_2 = F.relu(self.conv3(output_1))
+        # Feature fusion_1
+        output_2 = F.relu(self.conv4(output_1))
         print("output_2 :")
         print(output_2.shape)
-        print(output_2)
+        # print(output_2)
 
+        # Feature fusion_2
         output_2 = output_2.view(1, 243, 512, 512) # Reshape the tensor [81, 3, 512, 512] -> [1, 243, 512, 512]
-        output_3 = F.relu(self.conv4(output_2))
+        output_3 = F.relu(self.conv5(output_2))
         print("output_3 :")
         print(output_3.shape)
-        print(output_3)
+        # print(output_3)
 
-# train function
+# Train function
 def train(model, train_loader):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
@@ -109,7 +132,7 @@ def train(model, train_loader):
         output = model(data)
         # loss = F.cross_entropy(output, target)
 
-# model visualization
+# Model visualization
 model = LFSRNet().to(device)
 print(model)
 
@@ -122,10 +145,11 @@ for epoch in range(epochs):
 < Model Visualization >
 Test code by using random tensor
 '''
-# x = torch.randn(3, 3, 512, 512).to(device)
+print("< Model Visualization >")
+# x = torch.randn(81, 3, 512, 512).to(device)
 # output = model(x)
-# # print(output.shape())
-# summary(model, (3, 512, 512), device=device.type)
+# print("----------")
+summary(model, (81, 3, 512, 512), device=device.type)
 
 '''
 < Data Visualization >
@@ -148,7 +172,9 @@ def IMshow(img):
 # plt.show()
 
 '''
-< Memo >
+< TODO >
 '''
 # dataset class별로 train_set(imagefolder 이용), train_loader(dataloader 이용) 만듬
-# 각 class에서 81개의 tensor를 resblock을 통과하게
+
+# Solved
+# 각 class에서 81개의 tensor가 resblock을 통과
